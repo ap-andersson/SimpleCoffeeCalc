@@ -1,0 +1,29 @@
+<resources>
+    <string name="app_name">SimpleCoffeeCalc</string>
+
+    <string-array name="ratioNames">
+        <item>1/15 (strong)</item>
+        <item>1/16 (strong)</item>
+        <item>1/17 (strong)</item>
+        <item>1/18 (golden ratio)</item>
+        <item>1/19 (weak)</item>
+        <item>1/20 (weak)</item>
+        <item>1/21 (weak)</item>
+    </string-array>
+
+    <string-array name="ratioValues">
+        <item>15</item>
+        <item>16</item>
+        <item>17</item>
+        <item>18</item>
+        <item>19</item>
+        <item>20</item>
+        <item>21</item>
+    </string-array>
+
+    <string-array name="waterBeansOption">
+        <item name="water">Water</item>
+        <item name="beans">Beans</item>
+    </string-array>
+
+</resources>
