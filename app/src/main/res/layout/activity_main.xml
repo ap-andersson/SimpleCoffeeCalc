@@ -37,13 +37,13 @@
 
     <Spinner
         android:id="@+id/ratioDropdown"
-        android:layout_width="190dp"
+        android:layout_width="210dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginTop="16dp"
         android:layout_marginEnd="8dp"
-        android:textSize="18sp"
         android:spinnerMode="dropdown"
+        android:textSize="18sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.497"
         app:layout_constraintStart_toStartOf="parent"
@@ -64,7 +64,7 @@
 
     <Spinner
         android:id="@+id/waterOrBeansDropdown"
-        android:layout_width="190dp"
+        android:layout_width="150dp"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginTop="12dp"

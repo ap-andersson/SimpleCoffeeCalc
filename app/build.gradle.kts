@@ -6,12 +6,12 @@ plugins {
 
 android {
     namespace = "se.andynet.simplecoffeecalc"
-    compileSdk = 34
+    compileSdk = 35
 
     defaultConfig {
         applicationId = "se.andynet.simplecoffeecalc"
         minSdk = 34
-        targetSdk = 34
+        targetSdk = 35
         versionCode = 1
         versionName = "1.0"
 
