@@ -2,6 +2,7 @@ package se.andynet.simplecoffeecalc
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -14,6 +15,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.doAfterTextChanged
 import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
@@ -24,12 +26,43 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "datastore_preferences")
+val ratioKey = intPreferencesKey("ratio")
+val isWaterKey = booleanPreferencesKey("isWater")
+val weightKey = intPreferencesKey("weight")
 
 class MainActivity : AppCompatActivity() {
 
+    override fun onPause() {
+
+        Log.d("Debugging", "onPause")
+
+        lifecycleScope.launch {
+            savePreference()
+        }
+
+        super.onPause()
+    }
+
+//    override fun onSaveInstanceState(outState: Bundle) {
+//
+//        Log.d("Debugging", "onSaveInstanceState")
+//
+//        lifecycleScope.launch {
+//            savePreference()
+//        }
+//
+//        super.onSaveInstanceState(outState)
+//    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         enableEdgeToEdge()
+
+        //val waterOrBeansSpinner: Spinner = findViewById(R.id.waterOrBeansDropdown)
+        //val ratioSpinner: Spinner = findViewById(R.id.ratioDropdown)
+        //val gramsInputNumber: EditText = findViewById(R.id.gramsInputNumber)
+
         setContentView(R.layout.activity_main)
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
@@ -86,21 +119,56 @@ class MainActivity : AppCompatActivity() {
                 calculate()
             }
         }
+
+        lifecycleScope.launch {
+
+            val settings = readPreference()
+
+            if(settings.isWater != null && !settings.isWater) {
+                Log.d("Debugging", "Setting waterOrBeansSpinner to 1")
+                waterOrBeansSpinner.setSelection(1)
+            }
+
+            if(settings.weight != null) {
+                Log.d("Debugging", "Setting gramsInputNumber to " + settings.weight.toString())
+                gramsInputNumber.setText(settings.weight.toString())
+            }
+
+            if(settings.ratio != null) {
+                Log.d("Debugging", "Setting ratioSpinner to " + (settings.ratio-15).toString())
+                ratioSpinner.setSelection(settings.ratio-15)
+            }
+
+        }
     }
 
     // Writing on the file
-    private suspend fun savePreference(ratio: Int, isWater: Boolean, weight: Int?) {
-        val ratioKey = intPreferencesKey("ratio")
-        val isWaterKey = booleanPreferencesKey("isWater")
-        val weightKey = intPreferencesKey("weight")
+    private suspend fun savePreference() {
+
+        Log.d("Debugging", "Saving preferences")
+
+        val waterOrBeansSpinner: Spinner = findViewById(R.id.waterOrBeansDropdown)
+        val ratioSpinner: Spinner = findViewById(R.id.ratioDropdown)
+        val gramsInputNumber: EditText = findViewById(R.id.gramsInputNumber)
+
+        val ratioSelected = resources.getStringArray(R.array.ratioValues)[ratioSpinner.selectedItemPosition].toInt()
+        val measuredWeight = gramsInputNumber.text.toString().toIntOrNull()
+        val isWater = waterOrBeansSpinner.selectedItemPosition == 0
+
+
 
         var actualWeight = 0;
-        if(weight != null) {
-            actualWeight = weight.toInt()
+        if(measuredWeight != null) {
+            actualWeight = measuredWeight
         }
 
-        dataStore.edit {
-            it[ratioKey] = ratio
+        Log.d("Debugging", "ratioSelected:" + ratioSelected)
+        Log.d("Debugging", "isWater:" + isWater)
+        Log.d("Debugging", "actualWeight:" + actualWeight)
+
+        dataStore.edit { it: MutablePreferences ->
+            Log.d("Debugging", "inside datastore.edit")
+            it[ratioKey] = ratioSelected
             it[isWaterKey] = isWater
             it[weightKey] = actualWeight
         }
@@ -108,11 +176,19 @@ class MainActivity : AppCompatActivity() {
 
     // Reading the file
     private suspend fun readPreference(): Settings {
-        val ratioKey = intPreferencesKey("ratio")
-        val isWaterKey = booleanPreferencesKey("isWater")
-        val weightKey = intPreferencesKey("weight")
+
+        Log.d("Debugging", "readPreference")
+
+        //val ratioKey = intPreferencesKey("ratio")
+        //val isWaterKey = booleanPreferencesKey("isWater")
+        //val weightKey = intPreferencesKey("weight")
 
         val pref = dataStore.data.first()
+
+        Log.d("Debugging", "pref[ratioKey]:"+pref[ratioKey])
+        Log.d("Debugging", "pref[isWaterKey]:"+pref[isWaterKey])
+        Log.d("Debugging", "pref[weightKey]:"+pref[weightKey])
+
 
         return Settings(pref[ratioKey], pref[isWaterKey], pref[weightKey])
     }
@@ -127,10 +203,6 @@ class MainActivity : AppCompatActivity() {
         val ratioSelected = resources.getStringArray(R.array.ratioValues)[ratioSpinner.selectedItemPosition].toInt()
         val measuredWeight = gramsInputNumber.text.toString().toIntOrNull()
         val isWater = waterOrBeansSpinner.selectedItemPosition == 0
-
-        lifecycleScope.launch {
-            savePreference(ratioSelected, isWater, measuredWeight)
-        }
 
         if (measuredWeight == null) {
             resultTextShort.text = ""
