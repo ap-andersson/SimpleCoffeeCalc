@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">SimpleCoffeeCalc</string>
+    <string name="app_name">Simple Coffee Calculator</string>
 
     <string-array name="ratioNames">
         <item>1/15 (strong)</item>
