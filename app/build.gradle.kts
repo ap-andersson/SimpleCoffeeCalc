@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "se.andynet.simplecoffeecalc"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "se.andynet.simplecoffeecalc"
         minSdk = 34
-        targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        targetSdk = 36
+        versionCode = 2
+        versionName = "1.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -31,12 +31,12 @@ android {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
-    kotlinOptions {
-        jvmTarget = "11"
-    }
     buildFeatures {
         compose = true
         viewBinding = true
+    }
+    kotlin {
+        jvmToolchain(11)
     }
 }
 
