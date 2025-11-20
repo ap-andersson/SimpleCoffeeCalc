@@ -91,7 +91,8 @@
             android:layout_height="wrap_content"
             android:textSize="18sp"
             android:inputType="number"
-            app:layout_constraintStart_toStartOf="parent" />
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
 
         <TextView
             android:id="@+id/gramsText"
@@ -102,7 +103,8 @@
             android:singleLine="true"
             android:text="grams"
             android:textSize="18sp"
-            app:layout_constraintStart_toEndOf="@+id/gramsInputNumber" />
+            app:layout_constraintStart_toEndOf="@+id/gramsInputNumber"
+            app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -111,10 +113,10 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginTop="50dp"
-        android:textSize="32sp"
         android:inputType="none"
-        android:text="N/A"
+        android:text="2"
         android:textAlignment="center"
+        android:textSize="32sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/constraintLayout" />
