@@ -1,48 +1,32 @@
 package se.andynet.simplecoffeecalc
 
-import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
-import android.widget.EditText
-import android.widget.Spinner
-import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.widget.doAfterTextChanged
-import androidx.datastore.preferences.core.MutablePreferences
-import androidx.datastore.preferences.core.booleanPreferencesKey
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.first
+import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.coroutines.launch
-
-private const val USER_PREFERENCES_NAME = "datastore_preferences"
-
-private val Context.dataStore by preferencesDataStore(
-    name = USER_PREFERENCES_NAME
-)
-
-private val ratioKey = intPreferencesKey("ratio")
-private val isWaterKey = booleanPreferencesKey("isWater")
-private val weightKey = intPreferencesKey("weight")
+import se.andynet.simplecoffeecalc.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var binding: ActivityMainBinding
+    private val viewModel: MainViewModel by viewModels()
+
+    // Guards against the programmatic view updates in render() re-triggering the
+    // listeners below and feeding a stale value back into the ViewModel.
+    private var isApplyingState = false
+
     override fun onPause() {
-
-        Log.d("Debugging", "onPause")
-
-        lifecycleScope.launch {
-            savePreference()
-        }
-
+        viewModel.persist()
         super.onPause()
     }
 
@@ -51,142 +35,81 @@ class MainActivity : AppCompatActivity() {
 
         enableEdgeToEdge()
 
-        setContentView(R.layout.activity_main)
-        ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main)) { v, insets ->
+        binding = ActivityMainBinding.inflate(layoutInflater)
+        setContentView(binding.root)
+
+        ViewCompat.setOnApplyWindowInsetsListener(binding.main) { v, insets ->
             val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom)
             insets
         }
 
-        val ratioSpinner: Spinner = findViewById(R.id.ratioDropdown)
         ArrayAdapter.createFromResource(
             this,
             R.array.ratioNames,
             android.R.layout.simple_spinner_item
         ).also { adapter ->
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            ratioSpinner.adapter = adapter
+            binding.ratioDropdown.adapter = adapter
         }
 
-        val waterOrBeansSpinner: Spinner = findViewById(R.id.waterOrBeansDropdown)
         ArrayAdapter.createFromResource(
             this,
             R.array.waterBeansOption,
             android.R.layout.simple_spinner_item
         ).also { adapter ->
             adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item)
-            waterOrBeansSpinner.adapter = adapter
+            binding.waterOrBeansDropdown.adapter = adapter
         }
 
-
-        val gramsInputNumber: EditText = findViewById(R.id.gramsInputNumber)
-        gramsInputNumber.doAfterTextChanged {
-            calculate();
+        binding.gramsInputNumber.doAfterTextChanged { text ->
+            if (isApplyingState) return@doAfterTextChanged
+            viewModel.onWeightTextChanged(text?.toString().orEmpty())
         }
 
-        ratioSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener{
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                calculate()
-            }
+        binding.ratioDropdown.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                calculate()
+                if (isApplyingState) return
+                viewModel.onRatioIndexChanged(position)
             }
         }
 
-        waterOrBeansSpinner.onItemSelectedListener = object : AdapterView.OnItemSelectedListener{
-            override fun onNothingSelected(parent: AdapterView<*>?) {
-                calculate()
-            }
+        binding.waterOrBeansDropdown.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
+            override fun onNothingSelected(parent: AdapterView<*>?) = Unit
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                calculate()
+                if (isApplyingState) return
+                viewModel.onIsWaterChanged(position == 0)
             }
         }
 
         lifecycleScope.launch {
-
-            val settings = readPreference()
-
-            if(settings.isWater != null && !settings.isWater) {
-                Log.d("Debugging", "Setting waterOrBeansSpinner to 1")
-                waterOrBeansSpinner.setSelection(1)
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.uiState.collect { state -> render(state) }
             }
-
-            if(settings.weight != null) {
-                Log.d("Debugging", "Setting gramsInputNumber to " + settings.weight.toString())
-                gramsInputNumber.setText(settings.weight.toString())
-            }
-
-            if(settings.ratio != null) {
-                Log.d("Debugging", "Setting ratioSpinner to " + (settings.ratio-15).toString())
-                ratioSpinner.setSelection(settings.ratio-15)
-            }
-
         }
     }
 
-    // Writing on the file
-    private suspend fun savePreference() {
+    private fun render(state: CalculatorUiState) {
+        isApplyingState = true
 
-        val waterOrBeansSpinner: Spinner = findViewById(R.id.waterOrBeansDropdown)
-        val ratioSpinner: Spinner = findViewById(R.id.ratioDropdown)
-        val gramsInputNumber: EditText = findViewById(R.id.gramsInputNumber)
-
-        val ratioSelected = resources.getStringArray(R.array.ratioValues)[ratioSpinner.selectedItemPosition].toInt()
-        val measuredWeight = gramsInputNumber.text.toString().toIntOrNull()
-        val isWater = waterOrBeansSpinner.selectedItemPosition == 0
-
-
-        var actualWeight = 0;
-        if(measuredWeight != null) {
-            actualWeight = measuredWeight
+        if (binding.ratioDropdown.selectedItemPosition != state.ratioIndex) {
+            binding.ratioDropdown.setSelection(state.ratioIndex)
         }
 
-        Log.d("Debugging", "Saving preferences. ratioSelected:" + ratioSelected + ". isWater:" + isWater + ". actualWeight:" + actualWeight)
-
-        dataStore.edit { it: MutablePreferences ->
-            it[ratioKey] = ratioSelected
-            it[isWaterKey] = isWater
-            it[weightKey] = actualWeight
+        val waterPosition = if (state.isWater) 0 else 1
+        if (binding.waterOrBeansDropdown.selectedItemPosition != waterPosition) {
+            binding.waterOrBeansDropdown.setSelection(waterPosition)
         }
-    }
 
-    // Reading the file
-    private suspend fun readPreference(): Settings {
-
-        val pref = dataStore.data.first()
-
-        Log.d("Debugging", "Reading preferences. pref[ratioKey]:" + pref[ratioKey] + ". pref[isWaterKey]:" + pref[isWaterKey] + ". pref[weightKey]:" + pref[weightKey])
-
-        return Settings(pref[ratioKey], pref[isWaterKey], pref[weightKey])
-    }
-
-    fun calculate() {
-        val waterOrBeansSpinner: Spinner = findViewById(R.id.waterOrBeansDropdown)
-        val ratioSpinner: Spinner = findViewById(R.id.ratioDropdown)
-        val gramsInputNumber: EditText = findViewById(R.id.gramsInputNumber)
-        val resultTextLong: TextView = findViewById(R.id.resultTextLong)
-        val resultTextShort: TextView = findViewById(R.id.resultTextShort)
-
-        val ratioSelected = resources.getStringArray(R.array.ratioValues)[ratioSpinner.selectedItemPosition].toInt()
-        val measuredWeight = gramsInputNumber.text.toString().toIntOrNull()
-        val isWater = waterOrBeansSpinner.selectedItemPosition == 0
-
-        if (measuredWeight == null) {
-            resultTextShort.text = ""
-            resultTextLong.text = ""
-        } else {
-
-            if (isWater) {
-                var amountOfBeans: Int = (measuredWeight.toDouble() * (1/ratioSelected.toDouble())).toInt()
-                resultTextShort.text = "$amountOfBeans grams"
-                resultTextLong.text = "For $measuredWeight grams of water you need \n$amountOfBeans grams of coffee"
-            } else {
-                var amountOfWater: Int = (measuredWeight.toDouble() * ratioSelected.toDouble()).toInt()
-                resultTextShort.text = "$amountOfWater grams"
-                resultTextLong.text = "For $measuredWeight grams of coffee you need \n$amountOfWater grams of water"
-            }
+        if (binding.gramsInputNumber.text?.toString() != state.weightText) {
+            binding.gramsInputNumber.setText(state.weightText)
+            binding.gramsInputNumber.setSelection(binding.gramsInputNumber.text?.length ?: 0)
         }
+
+        isApplyingState = false
+
+        binding.resultTextShort.text = state.resultShort
+        binding.resultTextLong.text = state.resultLong
     }
 }
-
-data class Settings(val ratio: Int?, val isWater: Boolean?, val weight: Int?)

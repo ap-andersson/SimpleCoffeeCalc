@@ -1,9 +1,5 @@
 <resources>
     <string name="app_name">Simple Coffee Calculator</string>
-    <string name="select_ratio">Select coffee ratio</string>
-    <string name="water_or_beans">Water or beans weight</string>
-    <string name="grams">grams</string>
-    <string name="NA">N/A</string>
 
     <string-array name="ratioNames">
         <item>1/15 (strong)</item>
